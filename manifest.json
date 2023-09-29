@@ -1,0 +1,26 @@
+{
+  "name": "MTG Card Kindom",
+  "description": "Base Level Extension",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Buy Carticas",
+    "default_icon": {
+    }
+  },
+  "oauth2": {
+    "client_id": "ADD YOUR GOOGLE CLIENT ID",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.metadata.readonly",
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  },
+  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "identity",
+    "tabs",
+    "scripting"
+  ]
+}
