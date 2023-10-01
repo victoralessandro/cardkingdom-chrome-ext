@@ -1,16 +1,46 @@
 <html>
-  <style type="text/css">
-    #content{
-        padding: 10px;
-        height: 200px;
-        width: 400px;
-        font-family: Helvetica, Ubuntu, Arial, sans-serif;
-    }
-   </style>
+  <head>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
   <body>
-    <h1>MTG Card Kindom</h1>
-    <div id="content">
+    <h1>MTG Card Kindom - Buy Carticas</h1>
+    <div id="alert" class="status">
+      <div class="icon">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+          class="nz sb bal"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+            clip-rule="evenodd"
+          ></path>
+        </svg>
+      </div>
       <p id="status"></p>
+    </div>
+    <button id="cpy-xls">Copy for Excel</button>
+    <div id="content">
+      <div class="card-form">
+        <form id="form" class="form">
+          <h2 id="card-title">Title</h2>
+          <input type="number" min="1" max="10" id="qty" style="width: 60px" value="1" />
+          <button id="add-btn" type="button">Add this card</button>
+        </form>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th width="60">Qty</th>
+            <th width="40"></th>
+          </tr>
+        </thead>
+        <tbody id="list"></tbody>
+      </table>
     </div>
     <script src="popup.js"></script>
   </body>

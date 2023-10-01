@@ -1,115 +1,111 @@
-const _FILE_ID = "ADD YOU GOOGLE SHEET ID";
 let _TAB;
-let _TOKEN;
+let _META;
+let _LIST = [];
 
-function setStatus(status) {
+function hideAlert() {
+  document.getElementById("alert").style.display = "none";
+  document.getElementById("status").innerText = "";
+}
+function showAlert(status) {
+  document.getElementById("alert").style.display = "flex";
   document.getElementById("status").innerText = status;
 }
 
-async function extractTitle() {
+async function getSession(key) {
+  const session = await chrome.storage.session.get([key]);
+  return session[key];
+}
+
+async function setSession(key, value) {
+  await chrome.storage.session.set({ [key]: value });
+}
+
+async function clearSession() {
+  await chrome.storage.session.clear();
+}
+
+async function extractMeta() {
   const getData = () => {
     const metas = [...document.getElementsByTagName("meta")];
-    const availability = metas.find(
-      (meta) => meta.property === "product:availability"
-    )?.content;
-    return [document.title];
+    return {
+      title: document.title,
+      image: metas.find((meta) => meta.name === "twitter:image")?.content,
+    };
   };
   const result = await chrome.scripting.executeScript({
     target: { tabId: _TAB.id },
     func: getData,
   });
-  return result[0].result[0];
+  return result[0].result;
 }
 
-async function getNumRows(sheet) {
-  const headers = {
-    Authorization: `Bearer ${_TOKEN}`,
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  };
-  const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${_FILE_ID}/values/${sheet}`,
-    {
-      method: "GET",
-      headers,
-    }
-  );
-  const data = await response.json();
-  if (!data.values) {
-    return 0;
+async function save() {
+  await setSession("mtg_cards", _LIST);
+  showList(_LIST);
+}
+
+async function remove(index) {
+  if (index >= _LIST.length) {
+    return;
   }
-  return data.values.length;
+  _LIST.splice(index, 1);
+  await save();
 }
 
-async function appendToSheet() {
-  const sheet = document.getElementById("sheet").value;
-  const title = await extractTitle();
-  const rows = await getNumRows(sheet);
-  const headers = {
-    Authorization: `Bearer ${_TOKEN}`,
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  };
-  fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${_FILE_ID}/values/${sheet}!A:A:append?valueInputOption=USER_ENTERED`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        majorDimension: "ROWS",
-        values: [
-          [
-            _TAB.url,
-            title,
-            `=IMPORTXML(A${rows + 1}; "//span[@class='styleQty']")`,
-            `=TRANSPOSE(IMPORTXML(A${
-              rows + 1
-            }; "//meta[@property='product:availability']/@content | //input[@name='price']/@value"))`,
-          ],
-        ],
-      }),
-    }
-  )
-    .then((res) => {
-      setStatus("done");
-    })
-    .catch((error) => setStatus(error.message));
+async function showList(list = []) {
+  const table = document.getElementById("list");
+  if (!Array.isArray(list) || list.length === 0) {
+    table.innerHTML = "<tr><td>Empty List</td></tr>";
+    return;
+  }
+  table.innerHTML = list.map(
+    (item, index) =>
+      `<tr><td><a href="${item.url}" target="parent">${item.title}</a></td><td style="text-align:center">${item.qty}</td><td style="text-align:right"><button id="dlt-${index}">X</button></td></tr>`
+  );
+  for (let i = 0; i < list.length; i++) {
+    document
+      .getElementById(`dlt-${i}`)
+      .addEventListener("click", () => remove(i));
+  }
 }
 
-function createSubmitButton() {
-  const submitButton = document.createElement("button");
-  submitButton.innerText = "Add";
-  submitButton.onclick = function () {
-    setStatus("Adding row, please wait");
-    appendToSheet();
-  };
-  return submitButton;
+async function add() {
+  const qty = document.getElementById("qty").value || "1";
+  const url = _TAB.url;
+  const title = _META.title;
+  const image = _META.image;
+  const index = _LIST.findIndex((card) => card.url === url);
+  console.log(index);
+  if (index < 0) {
+    _LIST.push({ url, qty, title, image });
+  } else {
+    _LIST[index].qty = parseInt(_LIST[index].qty || 0) + parseInt(qty);
+  }
+  await save();
 }
 
-async function main() {
-  const contentDiv = document.getElementById("content");
-
-  const sheetInput = document.createElement("input");
-  sheetInput.type = "text";
-  sheetInput.id = "sheet";
-  contentDiv.appendChild(sheetInput);
-
-  const submitButton = createSubmitButton();
-  contentDiv.appendChild(submitButton);
-  setStatus("Add current card to your sheet");
+async function copy() {
+  const el = document.createElement("textarea");
+  el.value = _LIST.map((row) => [row.url, row.qty].join("\t")).join("\n");
+  el.setAttribute("readonly", "");
+  el.style.position = "absolute";
+  el.style.left = "-9999px";
+  document.body.appendChild(el);
+  el.select();
+  document.execCommand("copy");
+  document.body.removeChild(el);
 }
 
-function authenticate() {
-  setStatus("Authenticating with Google Drive");
-  chrome.identity.getAuthToken({ interactive: true }, function (token) {
-    if (token === undefined) {
-      setStatus("Error authenticating with Google Drive");
-      console.log("Error authenticating with Google Drive");
-    } else {
-      _TOKEN = token;
-      main();
-    }
-  });
+async function init(disabled) {
+  _LIST = (await getSession("mtg_cards")) || [];
+  showList(_LIST);
+  document.getElementById("cpy-xls").addEventListener("click", copy);
+
+  if (!disabled) {
+    _META = await extractMeta();
+    document.getElementById("card-title").innerText = _META.title;
+    document.getElementById("add-btn").addEventListener("click", add);
+  }
 }
 
 chrome.tabs.query(
@@ -120,14 +116,21 @@ chrome.tabs.query(
   function (tabs) {
     const tab = tabs[0];
     if (!tab) {
-      setStatus("Cannot get current tab");
+      showAlert("Cannot get current tab");
       return;
     }
+
+    let disabled = false;
     if (!tab.url?.includes("https://www.cardkingdom.com/mtg/")) {
-      setStatus("You must be in https://www.cardkingdom.com/mtg/");
-      return;
+      showAlert(
+        "You must be in https://www.cardkingdom.com/mtg/ to add cards to your list"
+      );
+      document.getElementById("form").style.display = "none";
+      disabled = true;
+    } else {
+      _TAB = tab;
+      hideAlert();
     }
-    _TAB = tab;
-    authenticate();
+    init(disabled);
   }
 );

@@ -1,7 +1,7 @@
 {
-  "name": "MTG Card Kindom",
+  "name": "MTG Card Kindom v2",
   "description": "Base Level Extension",
-  "version": "1.0",
+  "version": "2.0",
   "manifest_version": 3,
   "action": {
     "default_popup": "popup.html",
@@ -9,18 +9,11 @@
     "default_icon": {
     }
   },
-  "oauth2": {
-    "client_id": "ADD YOUR GOOGLE CLIENT ID",
-    "scopes": [
-      "https://www.googleapis.com/auth/drive.metadata.readonly",
-      "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/drive.file"
-    ]
-  },
   "host_permissions": ["<all_urls>"],
   "permissions": [
-    "identity",
     "tabs",
+    "storage",
+    "identity",
     "scripting"
   ]
 }
